@@ -1,0 +1,61 @@
+
+SPAM deduction ML 
+
+Dataset : https://archive.ics.uci.edu/ml/machine-learning-databases/00228/ 
+
+====================================================
+
+import org.apache.spark.mllib.feature.HashingTF
+import org.apache.spark.mllib.regression
+import org.apache.spark.mllib.classification.LogisticRegressionWithSGD
+
+//Loading data from hdfs 
+
+val indata = sc.textFile("/user/cloudera/SMSSpamCollection");
+
+//Transforming to key value pair 
+
+val kvdata = indata.map(line => (line.split("\t")(0) , line.split("\t")(1)))
+
+//Filtering normal and spam text contents
+
+val normal = kvdata.filter(line => line._1 == "ham").map(line => line._2)
+val spam = kvdata.filter(line => line._1 == "spam").map(line => line._2)
+
+//converting the text to Feature vectors 
+val tf = new HashingTF(numFeatures = 10000);
+val normalFeatures = normal.map(msg => tf.transform(msg.split(" ")))
+val spamFeatures = spam.map(msg => tf.transform(msg.split(" ")))
+
+//Building the LabelPoint Vectors 
+
+val labeledPositiveFeatures = spamFeatures.map(features => LabeledPoint(1, features))
+val labeledNegativeFeatures = normalFeatures.map(features => LabeledPoint(0, features))
+
+// Cache the training Data Set 
+val trainingData = labeledPositiveFeatures.union(labeledNegativeFeatures).cache()
+
+// Building a model with training Data Set
+val model = new LogisticRegressionWithSGD().run(trainingData);
+
+// Positive Test Text data 
+val postTest = tf.transform("Congratulations, you've been awarded a $25 bonus ".split(" "))
+// Negative  Test Text data 
+val negTest = tf.transform("I would be on leave next friday. Please plan accordingly.".split(" "))
+
+// Run the postive and negative test Prediction 
+val posprediction = model.predict(postTest);
+val negprediction = model.predict(negTest);
+
+
+==================================
+
+
+
+data.split("\t")
+
+
+
+
+
+
